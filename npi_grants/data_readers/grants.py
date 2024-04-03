@@ -45,7 +45,7 @@ class GrantsReader():
                  'state',
                  'country',
                  'forename',
-                 'lastname',
+                 'last_name',
                  'is_contact']]
 
         return df
@@ -61,7 +61,7 @@ class GrantsReader():
 
         df['both_names'] = df['pi_names'].apply(lambda x: x.split(',')[:2])
         df['forename'] = df['both_names'].apply(lambda x: x[0])
-        df['lastname'] = df['both_names'].apply(lambda x: x[1])
+        df['last_name'] = df['both_names'].apply(lambda x: x[1])
 
         return df
 
