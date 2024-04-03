@@ -46,7 +46,14 @@ class CreateFeatures:
                                                                   axis=1)  
         comb_df['set_dist_state'] = comb_df.apply(lambda row: set_dist(row['state_g'],
                                                                   row['state_p']), 
-                                                                  axis=1)  
+                                                                  axis=1) 
+
+        return comb_df[['jw_dist_forename',
+                     'set_dist_forename',
+                     'jw_dist_city',
+                     'set_dist_city',
+                     'jw_dist_state',
+                     'set_dist_state']]
 
 def jw_dist(v1: str, v2: str) -> float:
 

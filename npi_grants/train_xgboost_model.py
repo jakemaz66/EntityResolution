@@ -80,7 +80,7 @@ def create_training_data_features_labels():
 
 
 def create_xgb_model(features: pd.DataFrame, labels: np.ndarray, path: str):
-    xgb_model = entity_resolution_model.EnttityResolver('data')
+    xgb_model = entity_resolution_model.EnttityResolver(r'npi_grants\data')
     xgb_model.train(features, labels)
     xgb_model.save(path)
 

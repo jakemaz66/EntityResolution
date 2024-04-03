@@ -57,7 +57,7 @@ class EnttityResolver():
         """
         
         #Adding in check for training
-        if len(self.metadata == 0):
+        if len(self.metadata) == 0:
             return ValueError("Model must be trained first")
 
         if proba == True:
@@ -83,11 +83,11 @@ class EnttityResolver():
             file_name = f'{now}_{file_name}'
 
         #Checking if extension of file is correct format
-        if os.path.splittext(file_name)[1] != '.json':
+        if os.path.splitext(file_name)[1] != '.json':
             file_name = file_name + '.json'
 
         path = os.path.join(self.model_dir, file_name)
-        metadatapath = os.path.splittext(path)[0] + '_metadata.json'
+        metadatapath = os.path.splitext(path)[0] + '_metadata.json'
 
         if not overwrite and (os.path.exists(path) or os.path.exists(metadatapath)):
             return ValueError("Cannot overwrite existing file")
@@ -95,7 +95,7 @@ class EnttityResolver():
         self.model.save_model(path)
 
         with open(metadatapath, 'w') as file:
-            json.dump(metadatapath, file)
+            json.dump(self.metadata, file)
 
 
         
