@@ -60,8 +60,8 @@ class GrantsReader():
         df['pi_names'] = df['pi_names'].str.replace('(contact)', '')
 
         df['both_names'] = df['pi_names'].apply(lambda x: x.split(',')[:2])
-        df['forename'] = df['both_names'].apply(lambda x: x[0])
-        df['last_name'] = df['both_names'].apply(lambda x: x[1])
+        df['forename'] = df['both_names'].apply(lambda x: x[1])
+        df['last_name'] = df['both_names'].apply(lambda x: x[0])
 
         return df
 

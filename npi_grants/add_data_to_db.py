@@ -10,9 +10,6 @@ def npi_csv_to_db(csv_path: str):
 
     #Make npi data, have to rename columns, match data types, define bridge table, download beekeeper studio
     df = npi.NPIReader(csv_path).df
-
-    #Subsetting to desired columns
-    df = df[['npi', 'taxonomy_code', 'last_name', 'forename', 'address', 'cert_date', 'city', 'state', 'country']]
  
 
     #Dropping NaNs to enforce NOT NULL parameter
@@ -36,20 +33,6 @@ def grants_csv_to_db(csv_path: str):
 
     #Reading in data
     df = grants.GrantsReader(csv_path).df
-
-    #Subsetting to desired columns
-    df = df[['application_id',
-                 'budget_start',
-                 'grant_type',
-                 'total_cost',
-                 'organization',
-                 'city',
-                 'state',
-                 'country',
-                 'forename',
-                 'last_name',
-                 'is_contact']]
-
 
     #Dropping NaNs to enforce NOT NULL parameter
     df.dropna(inplace=True)

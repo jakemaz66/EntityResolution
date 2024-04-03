@@ -11,7 +11,7 @@ class CreateFeatures:
 
     def create_distance_features(self, grantees: pd.DataFrame, providers: pd.DataFrame):
         #Lowercasing and stripping whitespace
-        cols = ['forename', 'lastname', 'city', 'state']
+        cols = ['forename', 'city', 'state']
         for i in cols:
             grantees[i] = grantees[i].str.lower().str.strip()
             providers[i] = providers[i].str.lower().str.strip()
@@ -20,10 +20,10 @@ class CreateFeatures:
         comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
 
         #Features for testing data -> leaves only one lastname column
-        comb_df = grantees.add_suffix('_g').merge(providers.add_suffix('_p'), 
-                              how='outer',
-                              left_on='last_name_g',
-                              right_on='last_name_p')
+        # comb_df = grantees.add_suffix('_g').merge(providers.add_suffix('_p'), 
+        #                       how='outer',
+        #                       left_on='last_name_g',
+        #                       right_on='last_name_p')
         
 
         #Creating the distance features
@@ -51,13 +51,13 @@ class CreateFeatures:
 def jw_dist(v1: str, v2: str) -> float:
 
     if isinstance(v1, str) and isinstance(v2, str):
-        
+
         return jarowinkler.jarowinkler_similarity(v1, v2)
     else:
         return np.nan
 
 
-def set_dist(v1: str | np.nan, v2: str | np.nan) -> float:
+def set_dist(v1: str, v2: str) -> float:
     if isinstance(v1, str) and isinstance(v2, str):
         v1 = set(v1.split(' '))
         v2 = set(v2.split(' '))
