@@ -12,6 +12,9 @@ scikit-learn = "^1.4.1.post1"
 xgboost = "^2.0.3"
 jarowinkler = "^2.0.1"
 sqlalchemy = "^2.0.29"
+hnswlib = "^0.8.0"
+fasttext = {git = "https://github.com/cfculhane/fastText"}
+pybind11 = "^2.12.0"
 
 
 [build-system]

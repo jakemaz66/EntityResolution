@@ -17,13 +17,19 @@ class CreateFeatures:
             providers[i] = providers[i].str.lower().str.strip()
 
         #Features for training data
-        comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
+        #comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
 
-        #Features for testing data -> leaves only one lastname column
+        # Features for testing data -> leaves only one lastname column
         # comb_df = grantees.add_suffix('_g').merge(providers.add_suffix('_p'), 
         #                       how='outer',
         #                       left_on='last_name_g',
         #                       right_on='last_name_p')
+
+        #TESTING DATA
+        grantees['fullname'] = grantees['forename'].apply(lambda x: x.lower()) + " " + grantees['last_name'].apply(lambda x: x.lower())
+        providers['fullname'] = providers['forename'].apply(lambda x: x.lower()) + " " + providers['last_name'].apply(lambda x: x.lower())
+        comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
+   
         
 
         #Creating the distance features
@@ -47,13 +53,22 @@ class CreateFeatures:
         comb_df['set_dist_state'] = comb_df.apply(lambda row: set_dist(row['state_g'],
                                                                   row['state_p']), 
                                                                   axis=1) 
-
+        #Training
+        # return comb_df[['jw_dist_forename',
+        #              'set_dist_forename',
+        #              'jw_dist_city',
+        #              'set_dist_city',
+        #              'jw_dist_state',
+        #              'set_dist_state']]
+        #Testing
         return comb_df[['jw_dist_forename',
                      'set_dist_forename',
                      'jw_dist_city',
                      'set_dist_city',
                      'jw_dist_state',
-                     'set_dist_state']]
+                     'set_dist_state', 
+                     'fullname_g',
+                     'fullname_p']]
 
 def jw_dist(v1: str, v2: str) -> float:
 
