@@ -11,13 +11,13 @@ class CreateFeatures:
 
     def create_distance_features(self, grantees: pd.DataFrame, providers: pd.DataFrame):
         #Lowercasing and stripping whitespace
-        cols = ['forename', 'city', 'state']
-        for i in cols:
-            grantees[i] = grantees[i].str.lower().str.strip()
-            providers[i] = providers[i].str.lower().str.strip()
+        # cols = ['forename', 'city', 'state']
+        # for i in cols:
+        #     grantees[i] = grantees[i].str.lower().str.strip()
+        #     providers[i] = providers[i].str.lower().str.strip()
 
         #Features for training data
-        #comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
+        comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
 
         # Features for testing data -> leaves only one lastname column
         # comb_df = grantees.add_suffix('_g').merge(providers.add_suffix('_p'), 
@@ -26,9 +26,9 @@ class CreateFeatures:
         #                       right_on='last_name_p')
 
         #TESTING DATA
-        grantees['fullname'] = grantees['forename'].apply(lambda x: x.lower()) + " " + grantees['last_name'].apply(lambda x: x.lower())
-        providers['fullname'] = providers['forename'].apply(lambda x: x.lower()) + " " + providers['last_name'].apply(lambda x: x.lower())
-        comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
+        # grantees['fullname'] = grantees['forename'].apply(lambda x: x.lower()) + " " + grantees['last_name'].apply(lambda x: x.lower())
+        # providers['fullname'] = providers['forename'].apply(lambda x: x.lower()) + " " + providers['last_name'].apply(lambda x: x.lower())
+        # comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
    
         
 
@@ -66,9 +66,7 @@ class CreateFeatures:
                      'jw_dist_city',
                      'set_dist_city',
                      'jw_dist_state',
-                     'set_dist_state', 
-                     'fullname_g',
-                     'fullname_p']]
+                     'set_dist_state']]
 
 def jw_dist(v1: str, v2: str) -> float:
 

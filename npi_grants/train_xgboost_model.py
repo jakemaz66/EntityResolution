@@ -85,5 +85,6 @@ def create_xgb_model(features: pd.DataFrame, labels: np.ndarray, path: str):
     xgb_model.save(path)
 
 
-features, labels = create_training_data_features_labels()
-create_xgb_model(features, labels, 'entity_resolution_model.json')
+if __name__ == '__main__':
+    features, labels = create_training_data_features_labels()
+    create_xgb_model(features, labels, 'entity_resolution_model.json')

@@ -47,29 +47,49 @@ def get_hnsw_indices():
     #Turning the grantees vectors into an array of lists to query from
     grantee_array = np.array(df_grantees['vector_g'].dropna().tolist())
 
+
     labels, distances = p.knn_query(grantee_array, k=10)
 
     return labels
 
 
 def predict_matches():
+    """This function uses the queries HNSW indices to predict matches"""
 
     df_providers = npi.NPIReader('npi_grants/data/npidata_pfile_20240205-20240211.csv').df
     df_grantees = grants.GrantsReader('npi_grants\data\RePORTER_PRJ_C_FY2022.csv').df
 
-    feature_extractor = create_features.CreateFeatures()
+    #Restting index
+    df_grantees = df_grantees.reset_index()
+    df_providers = df_providers.reset_index()
 
-    for i in range(100):
+    #Get all the indicies of providers I want to test each grantee on
+    feature_extractor = create_features.CreateFeatures()
+    indices = get_hnsw_indices()
+
+    #Initializing dictionary to store predictions (matches or non matches) along with grantee index
+    matches = {}
     
-        features = feature_extractor.create_distance_features(df_grantees[i], df_providers.loc[get_hnsw_indices()[i]])
+    #Testing out 10 grantee rows
+    for i in range(10):
+        grant_df = df_grantees.loc[i].to_frame().transpose()[['forename','state','city']].reset_index()
+        provider_df =  df_providers.loc[indices[i][i]].to_frame().transpose()[['forename','state','city']].reset_index()
+
+        features = feature_extractor.create_distance_features(grant_df, 
+                                                              provider_df)
+        
+        comb_df = pd.concat([df_grantees.loc[i].to_frame().transpose().add_suffix('_g'),  df_providers.loc[indices[i][i]].to_frame().transpose().add_suffix('_p')], axis=1)
         preds = model.predict(features)
 
-    return (preds==1)
+        if preds[0]==1:
+            matches[i] = 1
+        else:
+            matches[i] = 0
 
-
+    return matches
 
 if __name__ == '__main__':
-    list = get_potential_matches()
+    predict_matches()
     print("1")
 
 
