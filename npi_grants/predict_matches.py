@@ -4,6 +4,7 @@ import hnswlib
 import fasttext
 from npi_grants import db, create_features, entity_resolution_model
 from sklearn.neighbors import NearestNeighbors
+from npi_grants.data_readers import npi, grants
 
 
 #Loading reusable classifier 
@@ -16,58 +17,52 @@ ft_model = fasttext.load_model('npi_grants/data/cc.en.50.bin')
 model.load('20240403_entity_resolution_model.json')
 
 #BLOCK ON NEAREST NEIGHBOR SEARCH
-def get_potential_matches():
-    """Get a set of likely matches between grantee/grant and 
-    provider/npi. We will use distances to estimate likely matches."""
-
-    #Getting grantee data from database
-    query = f'''SELECT id, forename, last_name, 
-                         city, state, country
-                FROM grantee
-                '''
-    grantees = (pd.read_sql(query, db.sql()))
-
-   
-   #Getting provider data from database
-    query = f'''SELECT id, forename, last_name, 
-                        city, state, country
-                FROM provider
-                '''
-    providers = pd.read_sql(query, db.sql())
-
-    #Converting data into features
-    feature_extractor = create_features.CreateFeatures()
-    features = feature_extractor.create_distance_features(grantees, providers)
+def get_hnsw_indices():
+    """This Function returns a lists of HNSW indices for the grantees that are close in nearest neighbors search"""
 
     #Embedding name columns using fastetext
-    features['vector_p'] = features['fullname_p'].apply(lambda x: ft_model.get_sentence_vector(x) if not pd.isnull(x) else None)
-    features['vector_g'] = features['fullname_g'].apply(lambda x: ft_model.get_sentence_vector(x))
+    df_providers = npi.NPIReader('npi_grants/data/npidata_pfile_20240205-20240211.csv').df
+    df_grantees = grants.GrantsReader('npi_grants\data\RePORTER_PRJ_C_FY2022.csv').df
+
+    #Calculating a fullname columns
+    df_providers['fullname'] = df_providers['forename'].apply(lambda x: x.lower()) + " " + df_providers['last_name'].apply(lambda x: x.lower())
+    df_grantees['fullname'] = df_grantees['forename'].apply(lambda x: x.lower()) + " " + df_grantees['last_name'].apply(lambda x: x.lower())
+
+    #Embedding the fullname using fasttext
+    df_providers['vector_p'] = df_providers['fullname'].apply(lambda x: ft_model.get_sentence_vector(x) if not pd.isnull(x) else None)
+    df_grantees['vector_g'] = df_grantees['fullname'].apply(lambda x: ft_model.get_sentence_vector(x))
 
     #HNSW Indexing
-    dim = len(features['vector_p'].iloc[0])  
+    dim = len(df_providers['vector_p'].iloc[0])  
     p = hnswlib.Index(space='cosine', dim=dim)  
-    p.init_index(max_elements=len(features['vector_p']), ef_construction=200, M=16)
+    p.init_index(max_elements=len(df_providers['vector_p']), ef_construction=200, M=16)
 
     #Turn dataframe column of arrays into an array of lists
-    providers_array =  np.array(features['vector_p'].dropna().tolist())
+    providers_array =  np.array(df_providers['vector_p'].dropna().tolist())
     ids = np.arange(len(providers_array))
 
     #Add FastText vectors to the index
     p.add_items(providers_array, ids)
-
+    
     #Turning the grantees vectors into an array of lists to query from
-    grantee_array = np.array(features['vector_g'].dropna().tolist())
+    grantee_array = np.array(df_grantees['vector_g'].dropna().tolist())
 
-    #Getting the nearest neighbor k for each grantee
     labels, distances = p.knn_query(grantee_array, k=10)
 
-    #Dropping non-features from dataset
-    features_new = features.drop(['fullname_g', 'fullname_p', 'vector_p', 'vector_g'], axis=1)
-    index = labels[0][0]
+    return labels
 
-    predict_df = features_new.loc[index].to_frame().transpose()
 
-    preds = model.predict(predict_df)
+def predict_matches():
+
+    df_providers = npi.NPIReader('npi_grants/data/npidata_pfile_20240205-20240211.csv').df
+    df_grantees = grants.GrantsReader('npi_grants\data\RePORTER_PRJ_C_FY2022.csv').df
+
+    feature_extractor = create_features.CreateFeatures()
+
+    for i in range(100):
+    
+        features = feature_extractor.create_distance_features(df_grantees[i], df_providers.loc[get_hnsw_indices()[i]])
+        preds = model.predict(features)
 
     return (preds==1)
 
