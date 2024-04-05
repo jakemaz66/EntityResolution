@@ -18,9 +18,9 @@ model.load('20240403_entity_resolution_model.json')
 
 #BLOCK ON NEAREST NEIGHBOR SEARCH
 def get_hnsw_indices():
-    """This Function returns a lists of HNSW indices for the grantees that are close in nearest neighbors search"""
+    """This Function returns a lists of HNSW indices from the providers for each grantee row that are close in a nearest neighbors search"""
 
-    #Embedding name columns using fastetext
+    #Reading in data
     df_providers = npi.NPIReader('npi_grants/data/npidata_pfile_20240205-20240211.csv').df
     df_grantees = grants.GrantsReader('npi_grants\data\RePORTER_PRJ_C_FY2022.csv').df
 
@@ -32,14 +32,14 @@ def get_hnsw_indices():
     df_providers['vector_p'] = df_providers['fullname'].apply(lambda x: ft_model.get_sentence_vector(x) if not pd.isnull(x) else None)
     df_grantees['vector_g'] = df_grantees['fullname'].apply(lambda x: ft_model.get_sentence_vector(x))
 
-    #HNSW Indexing
+    #HNSW Indexing on the provider dataset
     dim = len(df_providers['vector_p'].iloc[0])  
     p = hnswlib.Index(space='cosine', dim=dim)  
     p.init_index(max_elements=len(df_providers['vector_p']), ef_construction=200, M=16)
 
     #Turn dataframe column of arrays into an array of lists
     providers_array =  np.array(df_providers['vector_p'].dropna().tolist())
-    ids = np.arange(len(providers_array))
+    ids = df_providers.index.tolist()
 
     #Add FastText vectors to the index
     p.add_items(providers_array, ids)
@@ -47,8 +47,8 @@ def get_hnsw_indices():
     #Turning the grantees vectors into an array of lists to query from
     grantee_array = np.array(df_grantees['vector_g'].dropna().tolist())
 
-
-    labels, distances = p.knn_query(grantee_array, k=10)
+    #Querying the 100 closest provider rows for each grantee
+    labels, distances = p.knn_query(grantee_array, k=100)
 
     return labels
 
@@ -56,12 +56,13 @@ def get_hnsw_indices():
 def predict_matches():
     """This function uses the queries HNSW indices to predict matches"""
 
+    #Reading in the data
     df_providers = npi.NPIReader('npi_grants/data/npidata_pfile_20240205-20240211.csv').df
     df_grantees = grants.GrantsReader('npi_grants\data\RePORTER_PRJ_C_FY2022.csv').df
 
     #Restting index
-    df_grantees = df_grantees.reset_index()
-    df_providers = df_providers.reset_index()
+    # df_grantees = df_grantees.reset_index()
+    # df_providers = df_providers.reset_index()
 
     #Get all the indicies of providers I want to test each grantee on
     feature_extractor = create_features.CreateFeatures()
@@ -69,24 +70,33 @@ def predict_matches():
 
     #Initializing dictionary to store predictions (matches or non matches) along with grantee index
     matches = {}
-    
-    #Testing out 10 grantee rows
-    for i in range(10):
-        grant_df = df_grantees.loc[i].to_frame().transpose()[['forename','state','city']].reset_index()
-        provider_df =  df_providers.loc[indices[i][i]].to_frame().transpose()[['forename','state','city']].reset_index()
 
-        features = feature_extractor.create_distance_features(grant_df, 
-                                                              provider_df)
+    for index, row in df_grantees.iterrows():
         
-        comb_df = pd.concat([df_grantees.loc[i].to_frame().transpose().add_suffix('_g'),  df_providers.loc[indices[i][i]].to_frame().transpose().add_suffix('_p')], axis=1)
-        preds = model.predict(features)
+        #Transforming grantee row to a dataframe
+        row = row.to_frame().transpose()
 
-        if preds[0]==1:
-            matches[i] = 1
-        else:
-            matches[i] = 0
+        #Getting the 100 nearest neighbors from the providers for the grantee row
+        neighbors = df_providers.loc[indices[index].tolist()]
+
+        for j in range(len(neighbors)):
+            orig_ind = neighbors.index
+            neighbors.reset_index(inplace=True)
+
+            #Computing the features of
+            features = feature_extractor.create_distance_features(row, 
+                                                           neighbors.loc[j].to_frame().transpose())
+        
+            preds = model.predict(features)
+
+            if preds[0] == 1:
+                matches[f'{index} + {orig_ind[j]}'] = 1
+            else:
+                matches[f'{index} + {orig_ind[j]}'] = 0
+                print("i")
 
     return matches
+        
 
 if __name__ == '__main__':
     predict_matches()
