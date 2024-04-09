@@ -17,6 +17,12 @@ class CreateFeatures:
         #     providers[i] = providers[i].str.lower().str.strip()
 
         #Features for training data
+        grantees.reset_index(inplace=True)
+        grantees.rename(columns={'index': 'og_grantee_index'}, inplace=True)
+   
+        providers.reset_index(inplace=True)
+        providers.rename(columns={'index': 'og_provider_index'}, inplace=True)
+
         comb_df = pd.concat([grantees.add_suffix('_g'), providers.add_suffix('_p')], axis=1)
 
         # Features for testing data -> leaves only one lastname column

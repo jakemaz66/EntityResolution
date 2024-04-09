@@ -63,7 +63,7 @@ class GrantsReader():
         df['forename'] = df['both_names'].apply(lambda x: x[1])
         df['last_name'] = df['both_names'].apply(lambda x: x[0])
 
-        return df
+        return df.reset_index()
 
 if __name__ == '__main__':
     reader = GrantsReader('npi_grants/data/RePORTER_PRJ_C_FY2022.csv')
