@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import hnswlib 
 import fasttext
-from npi_grants import db, create_features, entity_resolution_model
+from npi_grants import create_features, entity_resolution_model
 from sklearn.neighbors import NearestNeighbors
 from npi_grants.data_readers import npi, grants
+from npi_grants.sql import db
 
 
 #Loading reusable classifier 

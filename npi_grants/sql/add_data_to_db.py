@@ -1,6 +1,6 @@
 import sqlalchemy
 from data_readers import grants, npi
-import db
+import npi_grants.sql.db as db
 
 
 def npi_csv_to_db(csv_path: str):
