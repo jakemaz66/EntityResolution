@@ -22,6 +22,10 @@ class EnttityResolver():
         self.model = self._initialize_xgb_model()
         self.metadata = {}
         self.model_dir = model_dir
+
+    def return_metadata(self):
+        """Returns the model metadata"""
+        return self.metadata
         
 
     def train(self, features: pd.DataFrame, labels: pd.Series):
@@ -61,7 +65,7 @@ class EnttityResolver():
             return ValueError("Model must be trained first")
 
         if proba == True:
-            self.model.predict_proba(features)[:, 0]
+            return self.model.predict_proba(features)[:, 1]
 
         return self.model.predict(features)
         
