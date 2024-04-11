@@ -13,69 +13,65 @@ from npi_grants.sql import db
 class Predict:
     """A class for predicting matches between grantees and doctors"""
 
-    def __init__(self, providers: pd.DataFrame, grantees: pd.DataFrame, classifier, classifier_load_path: str,
+    def __init__(self, providers: pd.DataFrame, classifier, classifier_load_path: str,
                  hnsw_instance, batch_size: int, embed_model=fasttext.load_model('npi_grants/data/cc.en.50.bin')):
         
         #Declaring attributes
         self.providers = providers
-        self.grantees = grantees
         self.hnsw_instance = hnsw_instance
         self.embed_model = embed_model
         self.batch_size = batch_size
+        self.features_creator = create_features.CreateFeatures()
 
         classifier.load(classifier_load_path)
         self.model = classifier
 
-    def embed_grantees(self):
-        """This function embeds the grantee dataframe with an added fullname column"""
 
-        #Calculating a fullname columns
-        self.grantees['fullname'] = (self.grantees['forename'].apply(lambda x: x.lower()) + " " + 
-        self.grantees['last_name'].apply(lambda x: x.lower()))
-
-         #Embedding the fullname using fasttext
-        self.grantees['vector_g'] = self.grantees['fullname'].apply(
-            lambda x: self.embed_model.get_sentence_vector(x) if not pd.isnull(x) else None)
-
-
-    def get_index_labels(self, k_neighbors: int):
+    def get_index_labels(self, k_neighbors: int, grantees):
         """This function gets the neighbors for each grantee and returns two dataframes for comparison"""
 
-        #Embedding the grantee fullname
-        self.embed_grantees()
+        #Calculating a fullname columns
+        grantees['fullname'] = (grantees['forename'].apply(lambda x: x.lower()) + " " + 
+        grantees['last_name'].apply(lambda x: x.lower()))
+
+         #Embedding the fullname using fasttext
+        grantees['vector_g'] = grantees['fullname'].apply(
+            lambda x: self.embed_model.get_sentence_vector(x) if not pd.isnull(x) else None)
 
         #Getting the HNSW (provider) indices
         index =  self.hnsw_instance.get_indices()
 
         #Chunking grantee dataframe
-        self.grantees = self.grantees.iloc[:self.batch_size, :]
-        grantee_array = np.array(self.grantees['vector_g'].dropna().tolist())
+        grantees = grantees.iloc[:self.batch_size, :]
+        grantee_array = np.array(grantees['vector_g'].dropna().tolist())
 
         label = []
 
         #Performing KNN queries
-        for i in self.grantees.index:
-            labels, distances = index.knn_query(grantee_array[i], k=k_neighbors)
+        for i in grantees.index:
+            labels, _ = index.knn_query(grantee_array[i], k=k_neighbors)
             label.append(labels)
         
         #Getting list of indices and subsetting provider frame
-        provder_idx = np.concatenate(label).flatten().tolist()
-        provider_frame = self.providers.loc[provder_idx]
+        provider_idx = np.concatenate(label).flatten().tolist()
+        provider_frame = self.providers.loc[provider_idx]
 
         #Expanding grantee frame by duplicating values
-        g_idx = self.grantees.index
+        g_idx = grantees.index
         expanded_indices = np.repeat(g_idx, k_neighbors)
-        grantee_expanded = self.grantees.loc[expanded_indices]
+        grantee_expanded = grantees.loc[expanded_indices]
 
-        return provider_frame, grantee_expanded, provder_idx
+        #Misspelled provider
+        return provider_frame, grantee_expanded, provider_idx
     
     
-    def predict(self, k_neighbors: int):
+    def predict(self, k_neighbors: int, grants):
         """This function makes predictions of matches on the batched grantee values"""
-        provider_frame, grantee_expanded, provder_idx = self.get_index_labels(k_neighbors)
+        provider_frame, grantee_expanded, provder_idx = self.get_index_labels(k_neighbors, grants)
 
         #Creating features from both dataframes
-        features = create_features.CreateFeatures.create_distance_features(self, grantee_expanded, provider_frame)
+
+        features = self.features_creator.create_distance_features(grantee_expanded, provider_frame)
 
         #Making predictions and turning into a new column
         pred = self.model.predict(features, proba=True)
@@ -83,17 +79,18 @@ class Predict:
 
         max_indexes = grantee_expanded.groupby('og_grantee_index')['pred_proba'].idxmax()
 
-        matches = {}
+        matches = pd.DataFrame(columns=['Grantee_ID', 'Provider_ID', 'Is_Match', 'Match_Prob'])
+
         for idx, i in enumerate(max_indexes):
- 
             pred_value = pred[i]
 
-            if pred_value < .5:
-                key = str(idx) + " " + str(i)
-                matches[key] = 0
+            if pred_value < 0.5:
+                is_match = 0
             else:
-                key = str(idx) + " " + str(i)
-                matches[key] = 1
+                is_match = 1
+
+            row_data = {'Grantee_ID': idx, 'Provider_ID': i, 'Is_Match': is_match, 'Match_Prob': pred_value}
+            matches = pd.concat([matches, pd.DataFrame([row_data])], ignore_index=True)
 
         return matches
 
@@ -105,11 +102,11 @@ if __name__ == '__main__':
 
     #Getting hnsw index
     hnsw = hnsw.HNSW(df_providers)
-    predictor = Predict(df_providers, df_grantees, entity_resolution_model.EnttityResolver(r'npi_grants\data'),
+    predictor = Predict(df_providers, entity_resolution_model.EnttityResolver(r'npi_grants\data'),
                         '20240403_entity_resolution_model.json', hnsw, 100
                         )
     
-    matches = predictor.predict(10)
+    matches = predictor.predict(10, df_grantees)
     matches
 
     
