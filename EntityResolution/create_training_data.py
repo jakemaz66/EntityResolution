@@ -1,6 +1,6 @@
 import pandas as pd
-from npi_grants import create_features
-from npi_grants.sql import db
+from EntityResolution import create_features
+from EntityResolution.sql import db
 
 
 def sample_last_names():

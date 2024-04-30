@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from npi_grants import create_features, entity_resolution_model
-from npi_grants.sql import db
+from EntityResolution import create_features, entity_resolution_model
+from EntityResolution.sql import db
 
 
 def fix_missing_pid_mistake(training: pd.DataFrame) -> list[int]:
